@@ -144,12 +144,6 @@ export function registerGraphTools(
           const headers: Record<string, string> = {};
           let body: unknown = null;
 
-          // When calendarId is provided, use calendar-specific paths
-          if (params.calendarId && path.startsWith('/me/events')) {
-            path = path.replace('/me/events', `/me/calendars/${encodeURIComponent(params.calendarId as string)}/events`);
-            delete params.calendarId;
-          }
-
           for (let [paramName, paramValue] of Object.entries(params)) {
             // Skip pagination control parameter - it's not part of the Microsoft Graph API - I think 🤷
             if (paramName === 'fetchAllPages') {
