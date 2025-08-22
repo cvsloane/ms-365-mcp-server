@@ -144,27 +144,31 @@ export function registerGraphTools(
           const headers: Record<string, string> = {};
           let body: unknown = null;
 
-          // Special handling for calendar operations with calendarId
-          const isCalendarOperation = [
-            'create-calendar-event',
-            'list-calendar-events',
-            'get-calendar-event',
-            'update-calendar-event',
-            'delete-calendar-event',
-          ].includes(tool.alias);
+          // Generic handling for ID parameters that modify the path structure
+          // This handles patterns where an ID parameter changes the resource path
+          const pathModifiers: Record<string, (path: string, id: string) => string> = {
+            calendarId: (p, id) => {
+              // Transform /me/events to /me/calendars/{id}/events
+              if (p === '/me/events') {
+                return `/me/calendars/${id}/events`;
+              } else if (p.startsWith('/me/events/')) {
+                return p.replace('/me/events/', `/me/calendars/${id}/events/`);
+              }
+              return p;
+            },
+            // Add more ID parameter handlers here as needed
+          };
 
-          if (isCalendarOperation && params.calendarId) {
-            // Modify path to use specific calendar
-            if (tool.alias === 'create-calendar-event' || tool.alias === 'list-calendar-events') {
-              path = `/me/calendars/${encodeURIComponent(params.calendarId as string)}/events`;
-            } else if (path.includes('/me/events/')) {
-              // For get, update, delete operations that have event-id in path
-              path = path.replace(
-                '/me/events/',
-                `/me/calendars/${encodeURIComponent(params.calendarId as string)}/events/`
-              );
+          // Process any ID parameters that modify the path
+          for (const [paramName, transformer] of Object.entries(pathModifiers)) {
+            if (params[paramName]) {
+              const encodedId = encodeURIComponent(params[paramName] as string);
+              const newPath = transformer(path, encodedId);
+              if (newPath !== path) {
+                logger.info(`Path modified by ${paramName}: ${path} -> ${newPath}`);
+                path = newPath;
+              }
             }
-            logger.info(`Modified path for specific calendar: ${path}`);
           }
 
           for (let [paramName, paramValue] of Object.entries(params)) {
@@ -173,8 +177,8 @@ export function registerGraphTools(
               continue;
             }
 
-            // Skip calendarId as it's already handled above for calendar operations
-            if (isCalendarOperation && paramName === 'calendarId') {
+            // Skip ID parameters that have already been processed for path modification
+            if (pathModifiers[paramName]) {
               continue;
             }
 
