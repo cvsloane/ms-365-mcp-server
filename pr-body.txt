@@ -1,0 +1,26 @@
+## Summary
+
+This PR fixes an issue where the calendarId parameter was not being properly handled for calendar operations, causing all events to be created on the default calendar instead of the specified calendar.
+
+## Changes Made
+
+- Enhanced calendar operation detection: Added logic to identify calendar-specific operations
+- Dynamic path modification: When calendarId is provided, the API path is dynamically changed from /me/events to /me/calendars/{calendarId}/events
+- Parameter filtering: Added proper handling to skip calendarId parameter from being passed as a query parameter since it's now used in the path
+- Comprehensive operation support: The fix works for all calendar operations, not just event creation
+- Backwards compatibility: When no calendarId is provided, operations default to the original /me/events endpoint
+
+## Technical Details
+
+The core issue was in src/graph-tools.ts where the endpoint paths were hardcoded. The fix adds special handling around line 147-167 to intercept calendarId parameter and modify the API path dynamically.
+
+## Testing
+
+- Added unit tests in test/calendar-fix.test.js to verify the logic
+- Tested with real Microsoft 365 calendars using test-real-calendar.js
+- Verified events are created on the correct calendar when calendarId is specified
+- Confirmed backwards compatibility when calendarId is not provided
+
+## Resolves
+
+This fixes the issue where users could not create calendar events on specific calendars other than their default calendar, which is essential for multi-calendar management scenarios.
