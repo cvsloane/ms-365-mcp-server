@@ -144,41 +144,15 @@ export function registerGraphTools(
           const headers: Record<string, string> = {};
           let body: unknown = null;
 
-          // Generic handling for ID parameters that modify the path structure
-          // This handles patterns where an ID parameter changes the resource path
-          const pathModifiers: Record<string, (path: string, id: string) => string> = {
-            calendarId: (p, id) => {
-              // Transform /me/events to /me/calendars/{id}/events
-              if (p === '/me/events') {
-                return `/me/calendars/${id}/events`;
-              } else if (p.startsWith('/me/events/')) {
-                return p.replace('/me/events/', `/me/calendars/${id}/events/`);
-              }
-              return p;
-            },
-            // Add more ID parameter handlers here as needed
-          };
-
-          // Process any ID parameters that modify the path
-          for (const [paramName, transformer] of Object.entries(pathModifiers)) {
-            if (params[paramName]) {
-              const encodedId = encodeURIComponent(params[paramName] as string);
-              const newPath = transformer(path, encodedId);
-              if (newPath !== path) {
-                logger.info(`Path modified by ${paramName}: ${path} -> ${newPath}`);
-                path = newPath;
-              }
-            }
+          // When calendarId is provided, use calendar-specific paths
+          if (params.calendarId && path.startsWith('/me/events')) {
+            path = path.replace('/me/events', `/me/calendars/${encodeURIComponent(params.calendarId as string)}/events`);
+            delete params.calendarId;
           }
 
           for (let [paramName, paramValue] of Object.entries(params)) {
             // Skip pagination control parameter - it's not part of the Microsoft Graph API - I think 🤷
             if (paramName === 'fetchAllPages') {
-              continue;
-            }
-
-            // Skip ID parameters that have already been processed for path modification
-            if (pathModifiers[paramName]) {
               continue;
             }
 
