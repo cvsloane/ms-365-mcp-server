@@ -144,37 +144,9 @@ export function registerGraphTools(
           const headers: Record<string, string> = {};
           let body: unknown = null;
 
-          // Special handling for calendar operations with calendarId
-          const isCalendarOperation = [
-            'create-calendar-event',
-            'list-calendar-events',
-            'get-calendar-event',
-            'update-calendar-event',
-            'delete-calendar-event',
-          ].includes(tool.alias);
-
-          if (isCalendarOperation && params.calendarId) {
-            // Modify path to use specific calendar
-            if (tool.alias === 'create-calendar-event' || tool.alias === 'list-calendar-events') {
-              path = `/me/calendars/${encodeURIComponent(params.calendarId as string)}/events`;
-            } else if (path.includes('/me/events/')) {
-              // For get, update, delete operations that have event-id in path
-              path = path.replace(
-                '/me/events/',
-                `/me/calendars/${encodeURIComponent(params.calendarId as string)}/events/`
-              );
-            }
-            logger.info(`Modified path for specific calendar: ${path}`);
-          }
-
           for (let [paramName, paramValue] of Object.entries(params)) {
             // Skip pagination control parameter - it's not part of the Microsoft Graph API - I think 🤷
             if (paramName === 'fetchAllPages') {
-              continue;
-            }
-
-            // Skip calendarId as it's already handled above for calendar operations
-            if (isCalendarOperation && paramName === 'calendarId') {
               continue;
             }
 
